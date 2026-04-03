@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <object class="GtkWindow" id="main_window">
+    <property name="default-height">600</property>
+    <property name="default-width">800</property>
+    <child type="titlebar">
+      <object class="GtkHeaderBar">
+        <property name="show-title-buttons">true</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkBox">
+        <property name="margin-bottom">24</property>
+        <property name="margin-end">24</property>
+        <property name="margin-start">24</property>
+        <property name="margin-top">24</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">12</property>
+        <child>
+          <object class="GtkLabel">
+            <property name="css-classes">title-large</property>
+            <property name="halign">center</property>
+            <property name="label">Hello World</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton">
+            <property name="label">Click me</property>
+            <signal name="clicked" handler="on_btn_click" swapped="no"/>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

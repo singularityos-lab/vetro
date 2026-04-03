@@ -1,0 +1,14 @@
+Window(id: "main_window", default_width: 800, default_height: 600) {
+    HeaderBar()
+        .showTitleButtons(true)
+        .asChildType("titlebar")
+
+    VBox(spacing: 12, margin: 24) {
+        Label("Hello World")
+            .cssClass("title-large")
+            .halign("center")
+
+        Button("Click me")
+            .onClicked(on_btn_click)
+    }
+}
