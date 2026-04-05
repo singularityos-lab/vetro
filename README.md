@@ -42,3 +42,7 @@ Watch mode:
 ```bash
 ./vetro --lsp
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
