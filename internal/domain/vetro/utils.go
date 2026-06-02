@@ -7,6 +7,21 @@ import (
 
 const gtkClassPrefix = "Gtk"
 
+// isCamelSuffix reports whether fullName ends with name at a CamelCase word
+// boundary, i.e. name begins a new capitalised component of fullName (so
+// "SingularityWidgetsChip" matches "Chip" but "...somethingchip" would not).
+func isCamelSuffix(fullName, name string) bool {
+	if !strings.HasSuffix(fullName, name) {
+		return false
+	}
+	idx := len(fullName) - len(name)
+	if idx == 0 {
+		return true
+	}
+	prev := fullName[idx-1]
+	return (prev >= 'a' && prev <= 'z') || (prev >= '0' && prev <= '9')
+}
+
 // ReadFile reads the entire file content.
 func ReadFile(path string) (string, error) {
 	data, err := os.ReadFile(path)
@@ -27,7 +42,7 @@ func qualifyGtkClassName(name string) string {
 	}
 
 	// If MetadataManager is loaded, search all namespaces for a class
-	// whose simple name matches (e.g. "TabBar" → "SingularityTabBar")
+	// whose simple name matches (e.g. "TabBar" matches "SingularityTabBar")
 	if MetadataManager != nil && MetadataManager.Metadata != nil {
 		// Exact full match first (already qualified by caller)
 		if _, ok := MetadataManager.Metadata.Classes[name]; ok {
@@ -52,12 +67,21 @@ func qualifyGtkClassName(name string) string {
 					otherMatch = fullName
 				}
 			}
-			// Suffix match (catches sub-namespaced types e.g. WidgetsToolBar → ToolBar)
-			if strings.HasSuffix(fullName, name) && simpleName != name {
-				if isSingularity && singularitySuffixMatch == "" {
-					singularitySuffixMatch = fullName
-				} else if !isGtk && !isSingularity && otherSuffixMatch == "" {
-					otherSuffixMatch = fullName
+			// Suffix match at a CamelCase boundary (catches sub-namespaced
+			// types, e.g. WidgetsToolBar for the short name ToolBar). When
+			// several classes share
+			// a suffix (e.g. Chip and CalendarEventChip both end in "Chip"),
+			// prefer the shortest full name: that is the most exact match, and
+			// it is deterministic regardless of Go's random map order.
+			if simpleName != name && isCamelSuffix(fullName, name) {
+				if isSingularity {
+					if singularitySuffixMatch == "" || len(fullName) < len(singularitySuffixMatch) {
+						singularitySuffixMatch = fullName
+					}
+				} else if !isGtk {
+					if otherSuffixMatch == "" || len(fullName) < len(otherSuffixMatch) {
+						otherSuffixMatch = fullName
+					}
 				}
 			}
 		}
