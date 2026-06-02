@@ -156,8 +156,11 @@ func (g *Generator) generateNode(b *strings.Builder, node *ComponentNode, indent
 		return nil
 	}
 
-	// Template: generates <template class="..." parent="..."> with children
-	// as direct <object> elements (no <child> wrapper) — for GtkTemplate support.
+	// Template: generates <template class="..." parent="...">. Children are
+	// emitted as direct <object> elements (consumed via [GtkChild] + manual
+	// placement) UNLESS they carry an explicit child type (asChildType), in
+	// which case they are wrapped in <child type="..."> so the parent's
+	// Buildable can route them to a named build slot (libadwaita-style).
 	if node.Type == "Template" {
 		templateClass := ""
 		templateParent := ""
@@ -171,8 +174,16 @@ func (g *Generator) generateNode(b *strings.Builder, node *ComponentNode, indent
 		}
 		fmt.Fprintf(b, "%s<template class=\"%s\" parent=\"%s\">\n", indentStr, templateClass, templateParent)
 		for _, child := range node.Children {
-			if err := g.generateNode(b, child, indent+2); err != nil {
-				return err
+			if child.ChildType != "" {
+				fmt.Fprintf(b, "%s  <child type=\"%s\">\n", indentStr, g.xmlEscape(child.ChildType))
+				if err := g.generateNode(b, child, indent+4); err != nil {
+					return err
+				}
+				fmt.Fprintf(b, "%s  </child>\n", indentStr)
+			} else {
+				if err := g.generateNode(b, child, indent+2); err != nil {
+					return err
+				}
 			}
 		}
 		fmt.Fprintf(b, "%s</template>\n", indentStr)
