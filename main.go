@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 	"vetro/internal/lsp"
 )
 
+var version = ""
+
 type VetroCLI struct {
 	In       string `cli:"in" help:"Input file path (.vetro or .ui)"`
 	Out      string `cli:"out" help:"Output file path (.ui or .vetro)"`
@@ -22,8 +25,35 @@ type VetroCLI struct {
 	ForceGir bool   `cli:"force-gir" help:"Force regeneration of GTK metadata cache"`
 	Gir      string `cli:"gir" help:"Path to a custom .gir file to load (e.g. LibSingularity-1.0.gir)"`
 	LSP      bool   `cli:"lsp" help:"Start Vetro Language Server (LSP)"`
+	Version  bool   `cli:"version" help:"Print the vetro version and exit"`
 
 	cli.Base
+}
+
+func resolveVersion() string {
+	if version != "" {
+		return version
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		var rev, dirty string
+		for _, s := range bi.Settings {
+			switch s.Key {
+			case "vcs.revision":
+				rev = s.Value
+			case "vcs.modified":
+				if s.Value == "true" {
+					dirty = "-dirty"
+				}
+			}
+		}
+		if rev != "" {
+			if len(rev) > 12 {
+				rev = rev[:12]
+			}
+			return rev + dirty
+		}
+	}
+	return "dev"
 }
 
 func main() {
@@ -42,6 +72,11 @@ func main() {
 }
 
 func (c *VetroCLI) Run() error {
+
+	if c.Version {
+		fmt.Println(resolveVersion())
+		return nil
+	}
 
 	// Initialize Metadata
 	if mm, err := metadata.NewManager(); err == nil {
