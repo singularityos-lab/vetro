@@ -37,6 +37,23 @@ Watch mode:
 ./vetro --in example.vetro --out example.ui --watch
 ```
 
+For a local SIT build, select its GIR directories explicitly:
+
+```bash
+./vetro --gir-path /path/to/sit-build/gtk --in example.vetro --out example.ui
+```
+
+The same option works with `--lsp`. `VETRO_GIR_PATH` provides the default when
+`--gir-path` is omitted. The first directory has priority over later directories
+and system metadata. `--gir` has priority over all directories. Missing, empty
+or malformed explicit metadata fails rather than silently using another toolkit.
+SIT retains the GTK namespaces and GtkBuilder format, so existing Vetro sources
+keep their widget names.
+
+GTK's build tree puts `Gtk-4.0.gir`, `Gdk-4.0.gir` and `Gsk-4.0.gir` together
+in `gtk/`. For an installed toolkit, use its `share/gir-1.0` directory. Separate
+directories with `:` on Linux or `;` on Windows.
+
 ## Run LSP server
 
 ```bash

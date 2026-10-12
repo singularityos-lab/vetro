@@ -163,6 +163,9 @@ func ParseGIR(path string) (*Metadata, error) {
 	}
 
 	nsPrefix := repo.Namespace.Name
+	if nsPrefix == "" {
+		return nil, fmt.Errorf("GIR namespace is missing")
+	}
 
 	meta := &Metadata{
 		Classes: make(map[string]*ClassMetadata),

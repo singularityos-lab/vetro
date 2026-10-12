@@ -24,6 +24,7 @@ type VetroCLI struct {
 	Watch    bool   `cli:"watch" help:"Watch input file for changes and auto-rebuild"`
 	ForceGir bool   `cli:"force-gir" help:"Force regeneration of GTK metadata cache"`
 	Gir      string `cli:"gir" help:"Path to a custom .gir file to load (e.g. LibSingularity-1.0.gir)"`
+	GirPath  string `cli:"gir-path" help:"GIR directories in priority order, separated by the platform path separator"`
 	LSP      bool   `cli:"lsp" help:"Start Vetro Language Server (LSP)"`
 	Version  bool   `cli:"version" help:"Print the vetro version and exit"`
 
@@ -78,17 +79,30 @@ func (c *VetroCLI) Run() error {
 		return nil
 	}
 
-	// Initialize Metadata
-	if mm, err := metadata.NewManager(); err == nil {
-		mm.LoadAllGIRs(c.ForceGir)
-		// Load user-specified custom GIR (e.g. a library not in system paths)
-		if c.Gir != "" {
-			if err := mm.LoadGtkMetadata(c.Gir, c.ForceGir); err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: could not load GIR %s: %v\n", c.Gir, err)
-			}
-		}
-		vetro.MetadataManager = mm
+	mm, err := metadata.NewManager()
+	if err != nil {
+		return err
 	}
+	// Explicit metadata wins over the system toolkit, including in the LSP.
+	if c.Gir != "" {
+		if err := mm.LoadGtkMetadata(c.Gir, c.ForceGir); err != nil {
+			return fmt.Errorf("load GIR %s: %w", c.Gir, err)
+		}
+	}
+	girPath := c.GirPath
+	if girPath == "" {
+		girPath = os.Getenv("VETRO_GIR_PATH")
+	}
+	if girPath != "" {
+		if err := mm.LoadGIRPaths(filepath.SplitList(girPath), c.ForceGir); err != nil {
+			return err
+		}
+	}
+	if err := mm.LoadAllGIRs(c.ForceGir); err != nil {
+		return err
+	}
+	mm.ResolveInheritance()
+	vetro.MetadataManager = mm
 
 	if c.LSP {
 		server := lsp.NewServer()
@@ -105,6 +119,7 @@ func (c *VetroCLI) Run() error {
 		fmt.Println("  vetro --in app.vetro --out app.ui --watch                # Watch mode")
 		fmt.Println("  vetro --in app.vetro --out app.ui --gir MyLib-1.0.gir   # With custom GIR")
 		fmt.Println("  vetro --lsp                                               # Start LSP server")
+		fmt.Println("  vetro --gir-path build/gtk --lsp                        # Use a local toolkit")
 		return fmt.Errorf("missing required flags --in and --out unless --lsp is used")
 	}
 

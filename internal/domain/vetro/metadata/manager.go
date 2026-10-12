@@ -101,6 +101,41 @@ func (m *Manager) LoadAllGIRs(force bool) error {
 	return nil
 }
 
+func (m *Manager) LoadGIRPaths(paths []string, force bool) error {
+	for _, dir := range paths {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return fmt.Errorf("read GIR directory %s: %w", dir, err)
+		}
+		loaded := false
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".gir") {
+				continue
+			}
+			path := filepath.Join(dir, entry.Name())
+			if err := m.loadGIRFile(path, force); err != nil {
+				return fmt.Errorf("load GIR %s: %w", path, err)
+			}
+			loaded = true
+		}
+		if !loaded {
+			return fmt.Errorf("no GIR files in %s", dir)
+		}
+	}
+	return nil
+}
+
+func (m *Manager) ResolveInheritance() {
+	if m.Metadata == nil {
+		return
+	}
+	// Cross-namespace parents may arrive after their children.
+	for _, class := range m.Metadata.Classes {
+		class.Resolved = false
+	}
+	m.Metadata.ResolveInheritance()
+}
+
 func fileHash(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
